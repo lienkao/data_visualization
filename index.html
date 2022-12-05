@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+	<title>Example</title>
+</head>
+
+<body>
+	<div style="display: flex; justify-content:flex-start">
+		<div id="dot-area" ></div>
+		<div id="map-area"></div>
+	</div>
+	<style>
+		.d3-tip {
+			line-height: 1;
+			padding: 6px;
+			background: rgba(0, 0, 0, 0.8);
+			color: #fff;
+			border-radius: 4px;
+			font-size: 20px;
+		}
+	</style>
+	<div id="bar-chart-area">
+		<div style="display: flex; justify-content:flex-start"> 
+			<div id="left-bar">
+				<select name="month" id="monthSelect">
+					<option value="" class="hide">-- Month --</option>
+				</select>
+			</div>
+			<div id="center-bar"></div>
+			<div id="right-bar"></div>
+		</div>
+	</div>
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<script src="//d3js.org/topojson.v1.min.js"></script>
+	<script src="d3-tip.js"></script>
+	<script src="main.js"></script>
+</body>
+</html>
+
+ 
