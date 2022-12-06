@@ -1,47 +1,38 @@
-const data_legend = [
-  {
-    "name": "pts",
-    "color": "red",
-  },
-  {
-    "name": "reb",
-    "color": "green",
-  },
-  {
-    "name": "ast",
-    "color": "blue",
-  }
-  ,
-  {
-    "name": "r:avg",
-    "color": "white",
-  }
-];
+
 let left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram;
 let center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram;
 let right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram;
 let [left_attr, center_attr, right_attr] = [null, null, null];
-[left_attr, center_attr, right_attr] = ["reb",  "ast", "pts"];
+[left_attr, center_attr, right_attr] = ["reb", "ast", "pts"];
+const fixed_bins_nums = {"reb": 40, "ast": 30, "pts": 20};
 
+// hw2 scatter variables(not use)
 let isBrushedBar = false;
 let isBrushedScatter = false;
 const MARGIN_scatter = { LEFT: 100, RIGHT: 10, TOP: 10, BOTTOM: 130 };
 const WIDTH_scatter = 600 - MARGIN_scatter.LEFT - MARGIN_scatter.RIGHT;
 const HEIGHT_scatter = 600 - MARGIN_scatter.TOP - MARGIN_scatter.BOTTOM;
 
+// bar chart variables
 const MARGIN_bar = { LEFT: 50, RIGHT: 50, TOP: 50, BOTTOM: 50 }
 const WIDTH_bar = 400 - (MARGIN_bar.LEFT + MARGIN_bar.RIGHT)
 const HEIGHT_bar = 300 - (MARGIN_bar.TOP + MARGIN_bar.BOTTOM)
 const FHeight_bar = 300;
 const fontSize_bar = 16;
 
+// map variables
 const MARGIN_map = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
 const FWidth_map = 1500, FHeight_map = 500;
 const FLeftTopX_map = 10, FLeftTopY_map = 10;
-const projection = d3.geoEquirectangular()
-                    //  .scale(200);
-d3.csv("D3_HW1_data/NBA1516.csv", d3.autoType).then(players => {
-  d3.csv("D3_HW1_data/TeamLoc.csv").then(teams => {
+const projection = d3.geoEquirectangular();
+const fontSize_map = 16;
+
+// select the attribute show in bar chart
+const bar_chart_attribute_option = [];
+
+
+d3.csv("data/players.csv", d3.autoType).then(players => {
+  d3.csv("data/country_loc.csv").then(countries => {
     d3.json("data/map.json").then(map => {
       players.forEach(element => {
         if (element.draft_number == "Undrafted")
@@ -62,32 +53,32 @@ d3.csv("D3_HW1_data/NBA1516.csv", d3.autoType).then(players => {
         .append("path")
         .attr("d", d3.geoPath().projection(projection))
         .attr("fill", "#fff")
-        .style("stroke", "#000");
+        .style("stroke", "#a4aca7");
         // console.log(d["properties"]["postal"])
-      let team_player_num = getTeamPlayersNum(teams, players);
-      // console.log(team_player_num)
-      let team_dots = svg_map.selectAll("g").data(teams).enter().append("g")
+      
+      let country_player_num = getCountryPlayersNum(countries, players);
+
+      let country_dots = svg_map.selectAll("g").data(countries).enter().append("g")
                               .attr("transform", (d, i) => {
                                 var po = projection([d.lon, d.lat]);
                                 return `translate(${FLeftTopX_map + MARGIN_map.LEFT + po[0]}, ${FLeftTopY_map + MARGIN_map.TOP + po[1]})`;
                               })
-                 
-      const fontSize_map = 20;
-      team_dots.append("circle")
-        .attr('r', d => team_player_num[d.team_abbreviation])
-        .attr("fill", 'red')
-        .attr("opacity", "0.5");
-      team_dots.append("text")
-        .attr("x", 12)
-        .attr("y", 3)
+      
+      country_dots.append("circle")
+        .attr('r', d => country_player_num[d.Country])
+        .attr("fill", '#1491a8')
+        .attr("opacity", "0.7");
+      country_dots.append("text")
+        .attr("x", 0)
+        .attr("y", 0)
         .attr("font-size", fontSize_map)
-        .text(d => d.team_abbreviation); 
+        .text(d => { return d.Country}); 
       // #endregion 
       // ------------- bar charts --------------------------
 
-      [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr, 40);
-      [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr, 30);
-      [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr, 20);
+      [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr, fixed_bins_nums[left_attr]);
+      [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr, fixed_bins_nums[center_attr]);
+      [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr, fixed_bins_nums[right_attr]);
 
       // #region
       // console.log(pts_fill_g)
@@ -122,8 +113,8 @@ d3.csv("D3_HW1_data/NBA1516.csv", d3.autoType).then(players => {
       // ------------- functions for views -----------------
       
       function transitionSelection (selected_players, isBar) {
-        let team_player_num = getTeamPlayersNum(teams, selected_players);
-        team_dots.selectAll("circle")
+        let team_player_num = getCountryPlayersNum(countries, selected_players);
+        country_dots.selectAll("circle")
                   .transition()
                   .duration(1000)
                   .attr('r', d => team_player_num[d.team_abbreviation]);
@@ -258,21 +249,22 @@ function reRenderingBarChart(selected_g, selected_players, x, y, histogram) {
           .data(fill_bins)
           .transition()
           .duration(1000)
-          .attr("y", d => (HEIGHT_bar - y(d.length))) 
+          .attr("y", d => ( y(d.length))) 
           // .attr("transform", d => `translate(${pts_x(d.x0)}, 0)`) 
-          .attr("height", d => y(d.length))
+          .attr("height", d => HEIGHT_bar -y(d.length))
   // console.log(selected_g)
 } // reRenderingBarChart
 
-function getTeamPlayersNum(teams, players) {
-  let team_player_num = {};
-  teams.forEach(element => {
-    team_player_num[element.team_abbreviation] = 0;
+function getCountryPlayersNum(countries, players) {
+  let country_player_num = {};
+  countries.forEach(element => {
+    country_player_num[element.Country] = 0;
   });
+  // console.log(country_player_num);
   players.forEach(element => {
-    team_player_num[element.team_abbreviation] += 1;
+    country_player_num[element.Country] += 1;
   });
-  return team_player_num;
+  return country_player_num;
 } // getTeamPlayersNum
 function drawBarChart(selected_div, all_players, selected_players, attribute, title, tick_nums) {
   
@@ -301,7 +293,7 @@ function drawBarChart(selected_div, all_players, selected_players, attribute, ti
   // Y ticks
   const y = d3.scaleLinear()
     .domain([0, d3.max(bins, d => d.length)])
-    .range([0, HEIGHT_bar])
+    .range([HEIGHT_bar, 0])
     
   g.append("g")
     .call(d3.axisLeft(y))   
@@ -309,9 +301,9 @@ function drawBarChart(selected_div, all_players, selected_players, attribute, ti
     .data(bins)
     .enter().append("rect")
     .attr("x", d => x(d.x0))
-    .attr("y", d => (HEIGHT_bar-y(d.length)))
+    .attr("y", d => (y(d.length)))
     .attr("width", d => x(d.x1)-x(d.x0))
-    .attr("height", d => y(d.length))
+    .attr("height", d => HEIGHT_bar-y(d.length))
       .style("fill",  `rgba(0, 0, 0, 0)`)
       .attr('stroke', 'black')
       .attr('stroke-width', "0.5px")
@@ -330,9 +322,9 @@ function drawBarChart(selected_div, all_players, selected_players, attribute, ti
     .append("rect")
       // .attr('class', `${title}-bin`)
       .attr("x", d => x(d.x0))
-      .attr("y", d => (HEIGHT_bar-y(d.length)))
+      .attr("y", d => y(d.length))
       .attr("width", d => x(d.x1)-x(d.x0))
-      .attr("height", d => y(d.length))
+      .attr("height", d => HEIGHT_bar- y(d.length))
       .style("fill", "rgba(105, 179, 162, 16)")
     // console.log(fill_g)
   return [fill_g, x, y, histogram];
