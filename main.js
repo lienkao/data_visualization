@@ -1,10 +1,19 @@
+// select the attribute show in bar chart
+const bar_chart_attribute_option = ["empty", "FB%", "KDA", "GPM", "KP%", "DMG%", "DPM", "VSPM"];
 
 let left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram;
 let center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram;
 let right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram;
-let [left_attr, center_attr, right_attr] = [null, null, null];
-[left_attr, center_attr, right_attr] = ["reb", "ast", "pts"];
-const fixed_bins_nums = {"reb": 40, "ast": 30, "pts": 20};
+let [left_attr, center_attr, right_attr] = ["KDA", "empty", "empty"];
+
+const fixed_bins_nums = {"VSPM": 22, "DMG%": 25};
+const fixed_x_axis_domain = {"KDA": [0, 9], "GPM": [200, 500], "DPM": [100, 700], "FB%": [0, 1.1], "KP%": [0.3, 1.1], "DMG%": [0.05, 0.375], "VSPM": [0.5,3.5]}
+// bar chart variables
+const MARGIN_bar = { LEFT: 50, RIGHT: 50, TOP: 50, BOTTOM: 50 }
+const WIDTH_bar = 400 - (MARGIN_bar.LEFT + MARGIN_bar.RIGHT)
+const HEIGHT_bar = 300 - (MARGIN_bar.TOP + MARGIN_bar.BOTTOM)
+const FHeight_bar = 300;
+const fontSize_bar = 16;
 
 // hw2 scatter variables(not use)
 let isBrushedBar = false;
@@ -13,12 +22,7 @@ const MARGIN_scatter = { LEFT: 100, RIGHT: 10, TOP: 10, BOTTOM: 130 };
 const WIDTH_scatter = 600 - MARGIN_scatter.LEFT - MARGIN_scatter.RIGHT;
 const HEIGHT_scatter = 600 - MARGIN_scatter.TOP - MARGIN_scatter.BOTTOM;
 
-// bar chart variables
-const MARGIN_bar = { LEFT: 50, RIGHT: 50, TOP: 50, BOTTOM: 50 }
-const WIDTH_bar = 400 - (MARGIN_bar.LEFT + MARGIN_bar.RIGHT)
-const HEIGHT_bar = 300 - (MARGIN_bar.TOP + MARGIN_bar.BOTTOM)
-const FHeight_bar = 300;
-const fontSize_bar = 16;
+
 
 // map variables
 const MARGIN_map = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
@@ -27,8 +31,14 @@ const FLeftTopX_map = 10, FLeftTopY_map = 10;
 const projection = d3.geoEquirectangular();
 const fontSize_map = 16;
 
-// select the attribute show in bar chart
-const bar_chart_attribute_option = [];
+// build <select> options 
+d3.selectAll("select").selectAll("option")
+  .data(bar_chart_attribute_option)
+  .enter()
+  .append("option")
+  .text(d=>d)
+  .attr('value', d=>d);
+
 
 
 d3.csv("data/players.csv", d3.autoType).then(players => {
@@ -65,20 +75,27 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                               })
       
       country_dots.append("circle")
-        .attr('r', d => country_player_num[d.Country])
+        .attr('r', d => Math.sqrt(country_player_num[d.Country]*9))
         .attr("fill", '#1491a8')
         .attr("opacity", "0.7");
       country_dots.append("text")
         .attr("x", 0)
         .attr("y", 0)
         .attr("font-size", fontSize_map)
-        .text(d => { return d.Country}); 
+        .text(d => { return d.Country})
+        .attr("opacity", 1); 
       // #endregion 
       // ------------- bar charts --------------------------
-
-      [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr, fixed_bins_nums[left_attr]);
-      [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr, fixed_bins_nums[center_attr]);
-      [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr, fixed_bins_nums[right_attr]);
+      
+      d3.select("#left-select")
+        .on('change', d=>{
+          d3.select("#left-bar").selectAll('svg').remove();
+          left_attr = d3.select("#left-select").property("value");
+          [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr);
+        });                        
+      [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr);
+      [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr);
+      [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr);
 
       // #region
       // console.log(pts_fill_g)
@@ -113,43 +130,23 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       // ------------- functions for views -----------------
       
       function transitionSelection (selected_players, isBar) {
-        let team_player_num = getCountryPlayersNum(countries, selected_players);
+        let country_selected_player_num = getCountryPlayersNum(countries, selected_players);
         country_dots.selectAll("circle")
                   .transition()
                   .duration(1000)
-                  .attr('r', d => team_player_num[d.team_abbreviation]);
+                  .attr('r', d => Math.sqrt(country_selected_player_num[d.Country]*9));
+        country_dots.selectAll("text")
+                  .transition()
+                  .duration(1000)
+                  .attr("opacity", d => { 
+                          if (country_selected_player_num[d.Country] > 0) {
+                            return 1; 
+                          } else return 0;
+                        }); 
         // console.log(pts_fill_g)
         reRenderingBarChart(left_bar_fill_g, selected_players, left_bar_x, left_bar_y, left_bar_histogram);
         reRenderingBarChart(center_bar_fill_g, selected_players, center_bar_x, center_bar_y, center_bar_histogram);
         reRenderingBarChart(right_bar_fill_g, selected_players, right_bar_x, right_bar_y, right_bar_histogram);
-        if (isBar) {
-          dots.transition()
-              .duration(1000)
-              .attr('stroke-width', d => {
-                let isSelected = false;
-                selected_players.forEach(player=>{
-                  if (d==player) {
-                    isSelected = true;
-                  }
-                })
-                if (isSelected)
-                  return '0.5px';
-                else
-                  return '0';
-              })
-              .attr("fill-opacity", d => {
-                let isSelected = false;
-                selected_players.forEach(player=>{
-                  if (d==player) {
-                    isSelected = true;
-                  }
-                })
-                if (isSelected)
-                  return '1';
-                else
-                  return '0.4';
-              })
-        }
       } // transitionSelection
       function filter_bar_selected() {
         let selected_players = []
@@ -161,6 +158,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
              )
             selected_players.push(player);
         })
+        
         return selected_players;
       }
       // ------------- brush for bar charts -------------------
@@ -266,7 +264,7 @@ function getCountryPlayersNum(countries, players) {
   });
   return country_player_num;
 } // getTeamPlayersNum
-function drawBarChart(selected_div, all_players, selected_players, attribute, title, tick_nums) {
+function drawBarChart(selected_div, all_players, selected_players, attribute, title) {
   
   
   let svg = d3.select(selected_div).append("svg")
@@ -274,20 +272,31 @@ function drawBarChart(selected_div, all_players, selected_players, attribute, ti
               .attr("height", HEIGHT_bar + MARGIN_bar.TOP + MARGIN_bar.BOTTOM)
   let g = svg.append("g")
               .attr("transform", `translate(${MARGIN_bar.LEFT}, ${MARGIN_bar.TOP})`)
+  let tick_nums = 20;
+  if (attribute in fixed_bins_nums)
+    tick_nums = fixed_bins_nums[attribute];
+  
+  let x_domain = [d3.min(all_players, d => d[attribute]), d3.max(all_players, d => d[attribute])];
+
+  if (attribute in fixed_x_axis_domain) 
+    x_domain = fixed_x_axis_domain[attribute];
+
   // X ticks
   const x = d3.scaleLinear()
-      .domain([d3.min(all_players, d => d[attribute]), d3.max(all_players, d => d[attribute])])
+      .domain(x_domain)
       .range([0, WIDTH_bar])
+  
 
   g.append("g")
     .attr("transform", `translate(0, ${HEIGHT_bar})`)
     .call(d3.axisBottom(x));
 
+  
   let histogram = d3.histogram()
                         .value(d => d[attribute])
                         .domain(x.domain())
-  
-  if (tick_nums != undefined) histogram.thresholds(x.ticks(tick_nums));
+                        .thresholds(x.ticks(tick_nums));
+      
   const bins = histogram(all_players);
   // console.log(bins);
   // Y ticks
@@ -304,8 +313,8 @@ function drawBarChart(selected_div, all_players, selected_players, attribute, ti
     .attr("y", d => (y(d.length)))
     .attr("width", d => x(d.x1)-x(d.x0))
     .attr("height", d => HEIGHT_bar-y(d.length))
-      .style("fill",  `rgba(0, 0, 0, 0)`)
-      .attr('stroke', 'black')
+      .style("fill",  `rgba(255, 255, 255, 100)`)
+      .attr('stroke', `rgba(0, 0, 0, 50)`)
       .attr('stroke-width', "0.5px")
   svg.append("text")
     .attr("transform", `translate(${MARGIN_bar.LEFT+ 10}, ${MARGIN_bar.TOP})`)
@@ -326,6 +335,8 @@ function drawBarChart(selected_div, all_players, selected_players, attribute, ti
       .attr("width", d => x(d.x1)-x(d.x0))
       .attr("height", d => HEIGHT_bar- y(d.length))
       .style("fill", "rgba(105, 179, 162, 16)")
+      .attr('stroke', 'black')
+      .attr('stroke-width', "0.5px")
     // console.log(fill_g)
   return [fill_g, x, y, histogram];
 } // drawBarChart
