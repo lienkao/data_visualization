@@ -11,8 +11,8 @@ const fixed_bins_nums = {"VSPM": 22, "DMG%": 25};
 const fixed_x_axis_domain = {"KDA": [0, 9], "GPM": [200, 500], "DPM": [100, 700], "FB%": [0, 1.1], "KP%": [0.3, 1.1], "DMG%": [0.05, 0.375], "VSPM": [0.5,3.5]}
 // bar chart variables
 const MARGIN_bar = { LEFT: 50, RIGHT: 50, TOP: 50, BOTTOM: 50 }
-const WIDTH_bar = 400 - (MARGIN_bar.LEFT + MARGIN_bar.RIGHT)
-const HEIGHT_bar = 300 - (MARGIN_bar.TOP + MARGIN_bar.BOTTOM)
+const WIDTH_bar = 350 - (MARGIN_bar.LEFT + MARGIN_bar.RIGHT)
+const HEIGHT_bar = 250 - (MARGIN_bar.TOP + MARGIN_bar.BOTTOM)
 const FHeight_bar = 300;
 const fontSize_bar = 16;
 
@@ -25,7 +25,7 @@ const HEIGHT_scatter = 600 - MARGIN_scatter.TOP - MARGIN_scatter.BOTTOM;
 
 // LoL map variables
 const MARGIN_lol = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
-const FWidth_lol = 500, FHeight_lol = 500;
+const FWidth_lol = 300, FHeight_lol = 300;
 const FLeftTopX_lol = 10, FLeftTopY_lol = 10;
 const fontSize_lol = 16;
 const WIDTH_lol = FWidth_lol - MARGIN_lol.LEFT - MARGIN_lol.RIGHT;
@@ -33,16 +33,16 @@ const HEIGHT_lol = FHeight_lol - MARGIN_lol.TOP - MARGIN_lol.BOTTOM;
 
 // map variables
 const MARGIN_map = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
-const FWidth_map = 1000, FHeight_map = 500;
+const FWidth_map = 1000, FHeight_map = 450;
 const FLeftTopX_map = 10, FLeftTopY_map = 10;
 const projection = d3.geoEquirectangular();
 const fontSize_map = 16;
 
-const role = [{"role":"TOP", "x":95,"y":85},
-              {"role":"JUNGLE", "x":120,"y":230},
-              {"role":"MID", "x":220,"y":245},
-              {"role":"SUPPORT", "x":330,"y":380},
-              {"role":"ADC", "x":400,"y":400}]
+const role = [{"role":"TOP", "x":57,"y":51},
+              {"role":"JUNGLE", "x":72,"y":115},
+              {"role":"MID", "x":132,"y":147},
+              {"role":"SUPPORT", "x":198,"y":210},
+              {"role":"ADC", "x":240,"y":240}]
 const teams = ['ALL', '100T', 'C9', 'CTBC', 'DRX', 'DWG', 'EDG', 'EG', 'FNC', 'G2', 'G3', 'GAM', 'Gen.G', 'JDG', 'RNG', 'Rogue', 'T1', 'TOP']
 
 let is_position_selected = {"TOP": true, "MID": true, "JUNGLE": true, "SUPPORT": true, "ADC": true}
@@ -129,6 +129,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
           
       //#region world map
       const svg_map = d3.select("#map-area").append("svg")
+              
               .attr("width", FWidth_map)
               .attr("height", FHeight_map);    
       let g_map = svg_map.append("g")
@@ -177,25 +178,22 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                               .enter()
                               .append("div");
       checkbox_team.append("input")
-      .attr("type", "checkbox")
-      .attr("id", d => d)
-      .attr('checked', true)
-      .on("change", d => {
-        if(d.id == 'ALL') {
-          if(is_team_selected[d] == false) {
-            teams.forEach(team => {
-              is_team_selected[team] = true;
-            })
-          }
-        } else {
+        .attr("type", "checkbox")
+        .attr("id", d => d)
+        .property('checked', true)
+        .on("change", d => {
           is_team_selected[d] = !is_team_selected[d];
-          if(is_team_selected[d] == false) {
+          if(d == 'ALL') {
+              teams.forEach(team => {
+                is_team_selected[team] = is_team_selected['ALL'];
+                checkbox_team.selectAll("input").property('checked', is_team_selected['ALL']);
+              })
+          } else {
             is_team_selected['ALL'] = false;
+            checkbox_team.select("#ALL").property('checked', is_team_selected['ALL']);
           }
-          console.log("is_team_selected", is_team_selected);
           transitionSelection();
-        }
-      })
+        })
       checkbox_team.append("text")
         .text(d => d);                        
       //#endregion team check box
@@ -234,6 +232,9 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                 .enter().append('div')
                 .text(d => d.Player)
                 .style("font-size","16px")
+                // .on('mousemove', d => {
+                  
+                // });
       //#end region selected player list
       function reRenderingBarChart(selected_g, selected_players, x, y, histogram) {
 
@@ -328,11 +329,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
           .attr("height", d => HEIGHT_bar-y(d.length))
             .style("fill",  `rgba(255, 255, 255, 100)`)
             .attr('stroke', `rgba(0, 0, 0, 50)`)
-            .attr('stroke-width', "0.5px")
-        svg.append("text")
-          .attr("transform", `translate(${MARGIN_bar.LEFT+ 10}, ${MARGIN_bar.TOP})`)
-          .attr("font-size", fontSize_bar)
-          .text(title) 
+            .attr('stroke-width', "0.5px");
         let fill_g = svg.append("g")
           .attr("transform", `translate(${MARGIN_bar.LEFT}, ${MARGIN_bar.TOP})`)
         const fill_bins = histogram(selected_players);
@@ -407,15 +404,16 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       //#endregion brush for bar charts
       
       function transitionSelection () {
+        const transition_time = 500;
         selected_players = get_selected_players();
         let role_selected_player_num = getRolePlayersNum(role, selected_players);
         role_dots.selectAll("circle")
                   .transition()
-                  .duration(1000)
+                  .duration(transition_time)
                   .attr('r', d=> Math.sqrt(role_selected_player_num[d.role]*9));
         role_dots.selectAll("text")
                   .transition()
-                  .duration(1000)
+                  .duration(transition_time)
                   .attr("opacity", d => { 
                           if (role_selected_player_num[d.role] > 0) {
                             return 1; 
@@ -424,15 +422,15 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         let country_selected_player_num = getCountryPlayersNum(countries, selected_players);
         country_dots.selectAll("circle")
                   .transition()
-                  .duration(1000)
+                  .duration(transition_time)
                   .attr('r', d => Math.sqrt(country_selected_player_num[d.Country]*9));
         country_dots.selectAll("text")
                   .transition()
-                  .duration(1000)
+                  .duration(transition_time)
                   .attr("opacity", d => { 
                           if (country_selected_player_num[d.Country] > 0) {
                             return 1; 
-                          } else return 0;
+                          } else return 0;     
                         }); 
         name_player.selectAll('div').remove();
         name_player.selectAll('div')
