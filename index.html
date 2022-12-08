@@ -6,7 +6,13 @@
 
 <body>
 	<div style="display: flex; justify-content:flex-start">
-		<div id="lol-area" ></div>
+		<div id="lol-area" style="display: flex; justify-content:flex-start; background-color: pink" >
+			<div style = "display: flex; flex-direction:column;">
+				<div style = "height:40px; width: 100px"><h2>Position</h2></div>
+				<div id="position-check-box" style="display: flex; flex-direction:column; height:460px; width: 100px;justify-content:center"></div>
+			</div>	
+			<div id="lol-map"></div>
+		</div>
 		<div id="map-area"></div>
 	</div>
 
@@ -20,20 +26,31 @@
 			font-size: 20px;
 		}
 	</style>
-	<div id="bar-chart-area">
-		<div style="display: flex; justify-content:flex-start"> 
-			<div>
-				<select id="left-select"></select>
-				<div id="left-bar"></div>
+	
+	<div style="width: 1500px;display: flex; justify-content:flex-start"> 
+		<div id="bar-chart-area">
+			<div style="display: flex; justify-content:flex-start"> 
+				<div>
+					<select id="left-select"></select>
+					<div id="left-bar"></div>
+				</div>
+				<div>
+					<select id="center-select"></select>
+					<div id="center-bar"></div>
+				</div>
+				<div>
+					<select id="right-select"></select>
+					<div id="right-bar"></div>
+				</div>
 			</div>
-			<div>
-				<select id="center-select"></select>
-				<div id="center-bar"></div>
-			</div>
-			<div>
-				<select id="right-select"></select>
-				<div id="right-bar"></div>
-			</div>
+		</div>
+		<div style = "display: flex; flex-direction:column;width: 150px">
+			<div style = "height:40px;display: flex; flex-direction:column;justify-content:center"><h2>Teams</h2></div>
+			<div id="team-check-box" style="display: flex; flex-direction:column;justify-content:center;width: 150px; height:360px" ></div>
+		</div>
+		<div style = "display: flex; flex-direction:column;">
+			<div style = "height:40px;display: flex; flex-direction:column;justify-content:center"><h2>Selected Player</h2></div>
+			<div id="selected-player-name" style="overflow-y:auto;height:360px;width:200px"></div>
 		</div>
 	</div>
 	<script src="https://d3js.org/d3.v5.min.js"></script>

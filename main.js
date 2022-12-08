@@ -1,11 +1,11 @@
 // select the attribute show in bar chart
-const bar_chart_attribute_option = ["empty", "FB%", "KDA", "GPM", "KP%", "DMG%", "DPM", "VSPM"];
+const bar_chart_attribute_option = ["Empty", "FB%", "KDA", "GPM", "KP%", "DMG%", "DPM", "VSPM"];
 let left_selected, center_selected, right_selected;
 // TODO
 let left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram;
 let center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram;
 let right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram;
-let [left_attr, center_attr, right_attr] = ["empty", "empty", "empty"];
+let [left_attr, center_attr, right_attr] = ["Empty", "Empty", "Empty"];
 
 const fixed_bins_nums = {"VSPM": 22, "DMG%": 25};
 const fixed_x_axis_domain = {"KDA": [0, 9], "GPM": [200, 500], "DPM": [100, 700], "FB%": [0, 1.1], "KP%": [0.3, 1.1], "DMG%": [0.05, 0.375], "VSPM": [0.5,3.5]}
@@ -33,10 +33,24 @@ const HEIGHT_lol = FHeight_lol - MARGIN_lol.TOP - MARGIN_lol.BOTTOM;
 
 // map variables
 const MARGIN_map = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
-const FWidth_map = 1500, FHeight_map = 500;
+const FWidth_map = 1000, FHeight_map = 500;
 const FLeftTopX_map = 10, FLeftTopY_map = 10;
 const projection = d3.geoEquirectangular();
 const fontSize_map = 16;
+
+const role = [{"role":"TOP", "x":95,"y":85},
+              {"role":"JUNGLE", "x":120,"y":230},
+              {"role":"MID", "x":220,"y":245},
+              {"role":"SUPPORT", "x":330,"y":380},
+              {"role":"ADC", "x":400,"y":400}]
+const teams = ['ALL', '100T', 'C9', 'CTBC', 'DRX', 'DWG', 'EDG', 'EG', 'FNC', 'G2', 'G3', 'GAM', 'Gen.G', 'JDG', 'RNG', 'Rogue', 'T1', 'TOP']
+
+let is_position_selected = {"TOP": true, "MID": true, "JUNGLE": true, "SUPPORT": true, "ADC": true}
+
+
+
+
+
 
 // build <select> options 
 d3.selectAll("select").selectAll("option")
@@ -47,20 +61,43 @@ d3.selectAll("select").selectAll("option")
   .attr('value', d=>d);
 
 
-const role = [{"role":"TOP", "x":95,"y":85},
-              {"role":"MID", "x":220,"y":245},
-              {"role":"ADC", "x":400,"y":400},
-              {"role":"SUPPORT", "x":330,"y":380},
-              {"role":"JUNGLE", "x":120,"y":230}]
+
 
 d3.csv("data/players.csv", d3.autoType).then(players => {
   d3.csv("data/country_loc.csv").then(countries => {
     d3.json("data/map.json").then(map => {
-      players.forEach(element => {
-        if (element.draft_number == "Undrafted")
-          element.draft_number = 65;
-      });
-      const svg_lol = d3.select("#lol-area").append("svg")
+      // console.log(players);
+      d3.csv("data/2022_team.csv").then( teams => {
+        players.forEach(player => {
+          teams.forEach(team => {
+            if (team.Player == player.Player)
+            {
+              player["Team"] = team.team_abbr;
+            }
+          })
+        });
+      })
+      //#region position check box   
+      let checkbox_position = d3.select("#position-check-box")
+                              .selectAll("div")
+                              .data(role)
+                              .enter()
+                              .append("div");
+      checkbox_position.append("input")
+          .attr("type", "checkbox")
+          .attr("id", d => d.role)
+          .attr('checked', true)
+          .on("change", d => {
+            is_position_selected[d.role] = !is_position_selected[d.role];
+            console.log("is_position_selected", is_position_selected);
+            transitionSelection();
+          })
+      checkbox_position.append("text")
+      .text(d => d.role);
+      //#endregion position check box
+
+      //#region lol map
+      const svg_lol = d3.select("#lol-map").append("svg")
                         .attr("width", FWidth_lol)
                         .attr("height", FHeight_lol);
       let img_lol = svg_lol.append("image")
@@ -78,7 +115,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       let role_player_num = getRolePlayersNum(role, players);
       console.log(role_player_num)
       role_dots.append("circle")
-                  .attr('r', d=> role_player_num[d.role])
+                  .attr('r', d=> Math.sqrt(role_player_num[d.role]*9))
                   .attr("fill", 'red')
                   .attr("opacity", "0.9");
       role_dots.append("text")
@@ -88,7 +125,9 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                   .text(d => d.role)
                   .style("fill", "white")
                   .attr("opacity", 1); 
-      // #region world map
+      //#endregion lol map
+          
+      //#region world map
       const svg_map = d3.select("#map-area").append("svg")
               .attr("width", FWidth_map)
               .attr("height", FHeight_map);    
@@ -121,31 +160,81 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         .attr("font-size", fontSize_map)
         .text(d => { return d.Country})
         .attr("opacity", 1); 
-      // #endregion 
-      // ------------- bar charts --------------------------
+      // #endregion world map
+
+      //#region  team check box
       
+      let is_team_selected = {}
+      teams.forEach(team => {
+        is_team_selected[team] = true;
+      })
+      // console.log(is_team_selected)
+      // console.log(teams)
+
+      let checkbox_team = d3.select("#team-check-box")
+                              .selectAll("div")
+                              .data(teams)
+                              .enter()
+                              .append("div");
+      checkbox_team.append("input")
+      .attr("type", "checkbox")
+      .attr("id", d => d)
+      .attr('checked', true)
+      .on("change", d => {
+        if(d.id == 'ALL') {
+          if(is_team_selected[d] == false) {
+            teams.forEach(team => {
+              is_team_selected[team] = true;
+            })
+          }
+        } else {
+          is_team_selected[d] = !is_team_selected[d];
+          if(is_team_selected[d] == false) {
+            is_team_selected['ALL'] = false;
+          }
+          console.log("is_team_selected", is_team_selected);
+          transitionSelection();
+        }
+      })
+      checkbox_team.append("text")
+        .text(d => d);                        
+      //#endregion team check box
+      //#region bar charts
       d3.select("#left-select")
         .on('change', d=>{
           d3.select("#left-bar").selectAll('svg').remove();
           left_attr = d3.select("#left-select").property("value");   
           [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr, 'left');    
+          transitionSelection();
       });  
       d3.select("#center-select")
         .on('change', d=>{
           d3.select("#center-bar").selectAll('svg').remove();
           center_attr = d3.select("#center-select").property("value"); 
           [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr, 'center');      
+          transitionSelection();
       });  
       d3.select("#right-select")
         .on('change', d=>{
           d3.select("#right-bar").selectAll('svg').remove();
           right_attr = d3.select("#right-select").property("value"); 
           [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr, 'right');      
+          transitionSelection();
       });  
       [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr, 'left');
       [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr, 'center');
       [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr, 'right');
 
+      //#endregion bar charts
+
+      //#region selected player list
+      let name_player = d3.select('#selected-player-name')
+      name_player.selectAll('div')
+                .data(players)
+                .enter().append('div')
+                .text(d => d.Player)
+                .style("font-size","16px")
+      //#end region selected player list
       function reRenderingBarChart(selected_g, selected_players, x, y, histogram) {
 
         fill_bins = histogram(selected_players);
@@ -165,10 +254,15 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         countries.forEach(element => {
           country_player_num[element.Country] = 0;
         });
+        let player_has_counted = new Set();
         // console.log(country_player_num);
-        players.forEach(element => {
-          country_player_num[element.Country] += 1;
+        players.forEach(player => {
+          if (!player_has_counted.has(player.Player)) {
+            country_player_num[player.Country] += 1;
+            player_has_counted.add(player.Player);
+          }
         });
+        // console.log(country_player_num)
         return country_player_num;
       } // getTeamPlayersNum
 
@@ -307,19 +401,18 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         else {
           isBrushedBar = true;
         }
-        let selected_players = filter_bar_selected();
-        transitionSelection(selected_players, true);
+        transitionSelection();
       } // endBrushed
 
-      //#endregion
-
-            
-      function transitionSelection (selected_players, isBar) {
+      //#endregion brush for bar charts
+      
+      function transitionSelection () {
+        selected_players = get_selected_players();
         let role_selected_player_num = getRolePlayersNum(role, selected_players);
         role_dots.selectAll("circle")
                   .transition()
                   .duration(1000)
-                  .attr('r', d => role_selected_player_num[d.role]);
+                  .attr('r', d=> Math.sqrt(role_selected_player_num[d.role]*9));
         role_dots.selectAll("text")
                   .transition()
                   .duration(1000)
@@ -341,18 +434,26 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                             return 1; 
                           } else return 0;
                         }); 
+        name_player.selectAll('div').remove();
+        name_player.selectAll('div')
+                .data(selected_players)
+                .enter().append('div')
+                .text(d => d.Player)
+                .style("font-size","16px")
         // console.log(pts_fill_g)
         reRenderingBarChart(left_bar_fill_g, selected_players, left_bar_x, left_bar_y, left_bar_histogram);
         reRenderingBarChart(center_bar_fill_g, selected_players, center_bar_x, center_bar_y, center_bar_histogram);
         reRenderingBarChart(right_bar_fill_g, selected_players, right_bar_x, right_bar_y, right_bar_histogram);
       } // transitionSelection
-      function filter_bar_selected() {
+      function get_selected_players() {
         let selected_players = []
         players.forEach(player=>{
           // filter bar chart selection
           if ((player[left_attr] >= left_selected[0] && player[left_attr] <= left_selected[1]) &&
               (player[center_attr] >= center_selected[0] && player[center_attr] <= center_selected[1]) &&
-              (player[right_attr] >= right_selected[0] && player[right_attr] <= right_selected[1]) 
+              (player[right_attr] >= right_selected[0] && player[right_attr] <= right_selected[1]) &&
+              (is_position_selected[player["Position"]]) &&
+              (is_team_selected[player["Team"]])
             )
             selected_players.push(player);
         })
