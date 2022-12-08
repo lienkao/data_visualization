@@ -5,7 +5,7 @@ let left_selected, center_selected, right_selected;
 let left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram;
 let center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram;
 let right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram;
-let [left_attr, center_attr, right_attr] = ["KDA", "GPM", "DPM"];
+let [left_attr, center_attr, right_attr] = ["empty", "empty", "empty"];
 
 const fixed_bins_nums = {"VSPM": 22, "DMG%": 25};
 const fixed_x_axis_domain = {"KDA": [0, 9], "GPM": [200, 500], "DPM": [100, 700], "FB%": [0, 1.1], "KP%": [0.3, 1.1], "DMG%": [0.05, 0.375], "VSPM": [0.5,3.5]}
@@ -23,7 +23,13 @@ const MARGIN_scatter = { LEFT: 100, RIGHT: 10, TOP: 10, BOTTOM: 130 };
 const WIDTH_scatter = 600 - MARGIN_scatter.LEFT - MARGIN_scatter.RIGHT;
 const HEIGHT_scatter = 600 - MARGIN_scatter.TOP - MARGIN_scatter.BOTTOM;
 
-
+// LoL map variables
+const MARGIN_lol = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
+const FWidth_lol = 500, FHeight_lol = 500;
+const FLeftTopX_lol = 10, FLeftTopY_lol = 10;
+const fontSize_lol = 16;
+const WIDTH_lol = FWidth_lol - MARGIN_lol.LEFT - MARGIN_lol.RIGHT;
+const HEIGHT_lol = FHeight_lol - MARGIN_lol.TOP - MARGIN_lol.BOTTOM;
 
 // map variables
 const MARGIN_map = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
@@ -41,6 +47,11 @@ d3.selectAll("select").selectAll("option")
   .attr('value', d=>d);
 
 
+const role = [{"role":"TOP", "x":95,"y":85},
+              {"role":"MID", "x":220,"y":245},
+              {"role":"ADC", "x":400,"y":400},
+              {"role":"SUPPORT", "x":330,"y":380},
+              {"role":"JUNGLE", "x":120,"y":230}]
 
 d3.csv("data/players.csv", d3.autoType).then(players => {
   d3.csv("data/country_loc.csv").then(countries => {
@@ -49,9 +60,35 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         if (element.draft_number == "Undrafted")
           element.draft_number = 65;
       });
-      
-      // ------------------------ map -----------------------------
-      // #region 
+      const svg_lol = d3.select("#lol-area").append("svg")
+                        .attr("width", FWidth_lol)
+                        .attr("height", FHeight_lol);
+      let img_lol = svg_lol.append("image")
+                    .attr("xlink:href", 'data/lol_map.jpg')
+                    .attr("width", WIDTH_lol)
+                    .attr("height", HEIGHT_lol)
+                    .attr("opacity", "0.95")
+                    .attr("transform", `translate(${FLeftTopX_lol + MARGIN_lol.LEFT}, 
+                      ${FLeftTopY_lol + MARGIN_lol.TOP})`);
+
+      let role_dots = svg_lol.selectAll("g").data(role).enter().append("g")
+                                .attr("transform", (d, i) => {
+                                  return `translate(${FLeftTopX_map + MARGIN_map.LEFT + d.x}, ${FLeftTopY_map + MARGIN_map.TOP + d.y})`;
+                                })
+      let role_player_num = getRolePlayersNum(role, players);
+      console.log(role_player_num)
+      role_dots.append("circle")
+                  .attr('r', d=> role_player_num[d.role])
+                  .attr("fill", 'red')
+                  .attr("opacity", "0.9");
+      role_dots.append("text")
+                  .attr("x", -20)
+                  .attr("y", -20)
+                  .attr("font-size", fontSize_lol)
+                  .text(d => d.role)
+                  .style("fill", "white")
+                  .attr("opacity", 1); 
+      // #region world map
       const svg_map = d3.select("#map-area").append("svg")
               .attr("width", FWidth_map)
               .attr("height", FHeight_map);    
@@ -65,7 +102,6 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         .attr("d", d3.geoPath().projection(projection))
         .attr("fill", "#fff")
         .style("stroke", "#a4aca7");
-        // console.log(d["properties"]["postal"])
       
       let country_player_num = getCountryPlayersNum(countries, players);
 
@@ -90,48 +126,25 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       
       d3.select("#left-select")
         .on('change', d=>{
-          left_attr = d3.select("#left-select").property("value");       
+          d3.select("#left-bar").selectAll('svg').remove();
+          left_attr = d3.select("#left-select").property("value");   
+          [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr, 'left');    
       });  
       d3.select("#center-select")
         .on('change', d=>{
-          center_attr = d3.select("#center-select").property("value");       
-      });    
+          d3.select("#center-bar").selectAll('svg').remove();
+          center_attr = d3.select("#center-select").property("value"); 
+          [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr, 'center');      
+      });  
+      d3.select("#right-select")
+        .on('change', d=>{
+          d3.select("#right-bar").selectAll('svg').remove();
+          right_attr = d3.select("#right-select").property("value"); 
+          [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr, 'right');      
+      });  
       [left_bar_fill_g, left_bar_x, left_bar_y, left_bar_histogram] = drawBarChart("#left-bar", players, players, left_attr, left_attr, 'left');
       [center_bar_fill_g, center_bar_x, center_bar_y, center_bar_histogram] = drawBarChart("#center-bar", players, players, center_attr, center_attr, 'center');
       [right_bar_fill_g, right_bar_x, right_bar_y, right_bar_histogram] = drawBarChart("#right-bar", players, players, right_attr, right_attr, 'right');
-
-      // // #region
-      // // console.log(pts_fill_g)  
-
-      // // ----- Left Bar Chart -----
-      // let brush_left = d3.brushX()
-      //                 .extent([[0, 0], [WIDTH_bar, HEIGHT_bar]])
-      //                 .on('start brush', brushed_left)
-      //                 .on('end', endBrushed_left)
-      // let left_selected = left_bar_x.domain();
-      // left_bar_fill_g.append('g')
-      //           .attr('class', 'brush-bar')
-      //           .call(brush_left)
-      // // ----- Center Bar Chart -----
-      // let brush_center = d3.brushX()
-      //                 .extent([[0, 0], [WIDTH_bar, HEIGHT_bar]])
-      //                 .on('start brush', brushed_center)
-      //                 .on('end', endBrushed_center)
-      // let center_selected = center_bar_x.domain();
-      // center_bar_fill_g.append('g')
-      //           .attr('class', 'brush-bar')
-      //           .call(brush_center)
-      // // ----- Right Bar Chart -----
-      // let brush_right = d3.brushX()
-      //                 .extent([[0, 0], [WIDTH_bar, HEIGHT_bar]])
-      //                 .on('start brush', brushed_right)
-      //                 .on('end', endBrushed_right)
-      // let right_selected = right_bar_x.domain();
-      // right_bar_fill_g.append('g')
-      //           .attr('class', 'brush-bar')
-      //           .call(brush_right)
-      // // #endregion
-      
 
       function reRenderingBarChart(selected_g, selected_players, x, y, histogram) {
 
@@ -158,6 +171,18 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         });
         return country_player_num;
       } // getTeamPlayersNum
+
+      function getRolePlayersNum(roles, players) {
+        let role_player_num = {};
+        roles.forEach(element => {
+          role_player_num[element.role] = 0;
+        });
+        // console.log(country_player_num);
+        players.forEach(element => {
+          role_player_num[element.Position] += 1;
+        });
+        return role_player_num;
+      } // getRolePlayersNum
       function drawBarChart(selected_div, all_players, selected_players, attribute, title, side) {
         
         
@@ -240,7 +265,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
           left_selected = x.domain();
         else if (side == 'center')
           center_selected = x.domain();
-        else
+        else if (side == 'right')
           right_selected = x.domain();
         fill_g.append('g')
           .attr('class', 'brush-bar')
@@ -260,7 +285,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
           left_selected = [reverse_x(extent[0]), reverse_x(extent[1])];
         else if (side == 'center')
           center_selected = [reverse_x(extent[0]), reverse_x(extent[1])];
-        else
+        else if (side == 'right')
           right_selected = [reverse_x(extent[0]), reverse_x(extent[1])];
           console.log('left:', left_selected, 'center:', center_selected, 'right: ', right_selected);
       } // brushed
@@ -275,7 +300,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
             left_selected = x.domain();
           else if (side == 'center')
             center_selected = x.domain();
-          else
+          else if (side == 'right')
             right_selected = x.domain();
           console.log('left:', left_selected, 'center:', center_selected, 'right: ', right_selected);
         }
@@ -290,6 +315,19 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
 
             
       function transitionSelection (selected_players, isBar) {
+        let role_selected_player_num = getRolePlayersNum(role, selected_players);
+        role_dots.selectAll("circle")
+                  .transition()
+                  .duration(1000)
+                  .attr('r', d => role_selected_player_num[d.role]);
+        role_dots.selectAll("text")
+                  .transition()
+                  .duration(1000)
+                  .attr("opacity", d => { 
+                          if (role_selected_player_num[d.role] > 0) {
+                            return 1; 
+                          } else return 0;
+                        }); 
         let country_selected_player_num = getCountryPlayersNum(countries, selected_players);
         country_dots.selectAll("circle")
                   .transition()
