@@ -47,13 +47,13 @@ const teams = ['ALL', '100T', 'C9', 'CTBC', 'DRX', 'DWG', 'EDG', 'EG', 'FNC', 'G
 
 let is_position_selected = {"TOP": true, "MID": true, "JUNGLE": true, "SUPPORT": true, "ADC": true}
 
-
-
-
+const blue = '#1491a8';
+const red = '#c02c38';
+const highlight = '#f07c82';
 
 
 // build <select> options 
-d3.selectAll("select").selectAll("option")
+d3.select("#bar-chart-area").selectAll("select").selectAll("option")
   .data(bar_chart_attribute_option)
   .enter()
   .append("option")
@@ -61,7 +61,7 @@ d3.selectAll("select").selectAll("option")
   .attr('value', d=>d);
 
 
-
+let selected_players_id = -1;
 
 d3.csv("data/players.csv", d3.autoType).then(players => {
   d3.csv("data/country_loc.csv").then(countries => {
@@ -77,6 +77,13 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
           })
         });
       })
+      let id = 0;
+      const player_dict = {};
+      players.forEach(player => {
+        player.player_id = ++id;
+        player_dict[player.player_id] = player;
+      })
+
       //#region position check box   
       let checkbox_position = d3.select("#position-check-box")
                               .selectAll("div")
@@ -113,11 +120,11 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                                   return `translate(${FLeftTopX_map + MARGIN_map.LEFT + d.x}, ${FLeftTopY_map + MARGIN_map.TOP + d.y})`;
                                 })
       let role_player_num = getRolePlayersNum(role, players);
-      console.log(role_player_num)
+      // console.log(role_player_num)
       role_dots.append("circle")
                   .attr('r', d=> Math.sqrt(role_player_num[d.role]*9))
-                  .attr("fill", 'red')
-                  .attr("opacity", "0.9");
+                  .attr("fill", blue)
+                  .attr("opacity", 1);
       role_dots.append("text")
                   .attr("x", -20)
                   .attr("y", -20)
@@ -129,7 +136,6 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
           
       //#region world map
       const svg_map = d3.select("#map-area").append("svg")
-              
               .attr("width", FWidth_map)
               .attr("height", FHeight_map);    
       let g_map = svg_map.append("g")
@@ -146,21 +152,35 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       let country_player_num = getCountryPlayersNum(countries, players);
 
       let country_dots = svg_map.selectAll("g").data(countries).enter().append("g")
-                              .attr("transform", (d, i) => {
-                                var po = projection([d.lon, d.lat]);
-                                return `translate(${FLeftTopX_map + MARGIN_map.LEFT + po[0]}, ${FLeftTopY_map + MARGIN_map.TOP + po[1]})`;
-                              })
+                                .attr("transform", (d, i) => {
+                                  return `translate(${FLeftTopX_map + MARGIN_map.LEFT}, ${FLeftTopY_map + MARGIN_map.TOP })`;
+                                });
       
       country_dots.append("circle")
         .attr('r', d => Math.sqrt(country_player_num[d.Country]*9))
-        .attr("fill", '#1491a8')
+        .attr("cx", d => projection([d.lon, d.lat])[0])
+        .attr("cy", d => projection([d.lon, d.lat])[1])
+        .attr("fill", blue)
         .attr("opacity", "0.7");
       country_dots.append("text")
-        .attr("x", 0)
-        .attr("y", 0)
+        .attr("x", d => projection([d.lon, d.lat])[0])
+        .attr("y", d => projection([d.lon, d.lat])[1])
         .attr("font-size", fontSize_map)
         .text(d => { return d.Country})
         .attr("opacity", 1); 
+      var zoom = d3.zoom()
+        .scaleExtent([1, 8])
+        .on('zoom', function() {
+            g_map.selectAll('path')
+                  .attr('transform', d3.event.transform);
+            console.log(d3.event.transform)
+            country_dots.selectAll("circle")
+                  .attr('transform', d3.event.transform);
+            country_dots.selectAll("text")
+                  .attr('transform', d3.event.transform)
+        });
+  
+      svg_map.call(zoom);
       // #endregion world map
 
       //#region  team check box
@@ -230,12 +250,24 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       name_player.selectAll('div')
                 .data(players)
                 .enter().append('div')
+                .attr("id", d => `player-id-${d.player_id}`)
                 .text(d => d.Player)
                 .style("font-size","16px")
-                // .on('mousemove', d => {
-                  
+                .on("click", d=>{
+                  if (d.player_id == selected_players_id)
+                    selected_players_id = -1;
+                  else
+                    selected_players_id = d.player_id;
+                  transitionSelection();
+                })
+                // .on("mouseout", d=>{
+                //   d3.select(`#player-id-${d.player_id}`)
+                //     .style("color", "black");
                 // });
-      //#end region selected player list
+
+      //#endregion selected player list
+
+
       function reRenderingBarChart(selected_g, selected_players, x, y, histogram) {
 
         fill_bins = histogram(selected_players);
@@ -247,6 +279,24 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                 .attr("y", d => ( y(d.length))) 
                 // .attr("transform", d => `translate(${pts_x(d.x0)}, 0)`) 
                 .attr("height", d => HEIGHT_bar -y(d.length))
+                .style("fill", d => {
+                  let color = blue;
+                  d.forEach( e => {
+                    // console.log(e, player_dict[selected_players_id], player_dict[selected_players_id] == e);
+                    if(player_dict[selected_players_id] == e)
+                      color = red;
+                  })
+                  return color;
+                })
+                .attr("opacity", d => {
+                  let alpha = 0.5;
+                  d.forEach( e => {
+                    // console.log(e, player_dict[selected_players_id], player_dict[selected_players_id] == e);
+                    if(player_dict[selected_players_id] == e)
+                      alpha = 1;
+                  })
+                  return alpha;
+                })
         // console.log(selected_g)
       } // reRenderingBarChart
 
@@ -344,9 +394,10 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
             .attr("y", d => y(d.length))
             .attr("width", d => x(d.x1)-x(d.x0))
             .attr("height", d => HEIGHT_bar- y(d.length))
-            .style("fill", "rgba(105, 179, 162, 16)")
+            .style("fill", blue)
             .attr('stroke', 'black')
             .attr('stroke-width', "0.5px")
+
           // console.log(fill_g)
         let brush = d3.brushX()
             .extent([[0, 0], [WIDTH_bar, HEIGHT_bar]])
@@ -406,11 +457,28 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       function transitionSelection () {
         const transition_time = 500;
         selected_players = get_selected_players();
+        // console.log(selected_players_id);
         let role_selected_player_num = getRolePlayersNum(role, selected_players);
         role_dots.selectAll("circle")
                   .transition()
                   .duration(transition_time)
-                  .attr('r', d=> Math.sqrt(role_selected_player_num[d.role]*9));
+                  .attr('r', d=> Math.sqrt(role_selected_player_num[d.role]*9))
+                  .attr("opacity", d => {
+                    if (selected_players_id == -1 || player_dict[selected_players_id]['Position'] == d.role)
+                    {
+                      return 1;
+                    }
+                    else
+                      return 0.5;
+                  })
+                  .attr("fill", d => {
+                    if (selected_players_id != -1 && player_dict[selected_players_id]['Position'] == d.role)
+                    {
+                      return red;
+                    }
+                    else
+                      return blue;
+                  });
         role_dots.selectAll("text")
                   .transition()
                   .duration(transition_time)
@@ -423,7 +491,23 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         country_dots.selectAll("circle")
                   .transition()
                   .duration(transition_time)
-                  .attr('r', d => Math.sqrt(country_selected_player_num[d.Country]*9));
+                  .attr('r', d => Math.sqrt(country_selected_player_num[d.Country]*9))
+                  .attr("opacity", d => {
+                    if (selected_players_id == -1 || player_dict[selected_players_id].Country == d.Country)
+                    {
+                      return 1;
+                    }
+                    else
+                      return 0.5;
+                  })
+                  .attr("fill", d => {
+                    if (selected_players_id != -1 && player_dict[selected_players_id].Country == d.Country)
+                    {
+                      return red;
+                    }
+                    else
+                      return blue;
+                  });
         country_dots.selectAll("text")
                   .transition()
                   .duration(transition_time)
@@ -436,8 +520,20 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         name_player.selectAll('div')
                 .data(selected_players)
                 .enter().append('div')
+                .attr("id", d => `player-id-${d.player_id}`)
                 .text(d => d.Player)
+                .style("background-color", d => {
+                  if (d.player_id == selected_players_id)
+                    return highlight;
+                })
                 .style("font-size","16px")
+                .on("click", d=>{
+                  if (d.player_id == selected_players_id)
+                    selected_players_id = -1;
+                  else
+                    selected_players_id = d.player_id;
+                  transitionSelection();
+                })
         // console.log(pts_fill_g)
         reRenderingBarChart(left_bar_fill_g, selected_players, left_bar_x, left_bar_y, left_bar_histogram);
         reRenderingBarChart(center_bar_fill_g, selected_players, center_bar_x, center_bar_y, center_bar_histogram);
