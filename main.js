@@ -35,7 +35,7 @@ const HEIGHT_lol = FHeight_lol - MARGIN_lol.TOP - MARGIN_lol.BOTTOM;
 const MARGIN_map = { LEFT: 10, RIGHT: 10, TOP: 10, BOTTOM: 10 };
 const FWidth_map = 1000, FHeight_map = 450;
 const FLeftTopX_map = 10, FLeftTopY_map = 10;
-const projection = d3.geoEquirectangular();
+const projection = d3.geoMercator();
 const fontSize_map = 16;
 
 const role = [{"role":"TOP", "x":57,"y":51},
@@ -47,9 +47,9 @@ const teams = ['ALL', '100T', 'C9', 'CTBC', 'DRX', 'DWG', 'EDG', 'EG', 'FNC', 'G
 
 let is_position_selected = {"TOP": true, "MID": true, "JUNGLE": true, "SUPPORT": true, "ADC": true}
 
-const blue = '#1491a8';
-const red = '#c02c38';
-const highlight = '#f07c82';
+const color_dict = {
+  dot_normal: '#f07c82', dot_selected: '#c02c38', highlight: '#f07c82', earth_sea: '#2983bb', earth_land: "#68b88e", national_boundaries: '#eef7f2'
+}
 
 
 // build <select> options 
@@ -114,7 +114,9 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                     .attr("opacity", "0.95")
                     .attr("transform", `translate(${FLeftTopX_lol + MARGIN_lol.LEFT}, 
                       ${FLeftTopY_lol + MARGIN_lol.TOP})`);
-
+      let tip_lol = d3.tip()
+                      .attr('class', 'd3-tip')
+                      .html(d=>`${d.role}</br>Player number: ${role_player_num[d.role]}`)                
       let role_dots = svg_lol.selectAll("g").data(role).enter().append("g")
                                 .attr("transform", (d, i) => {
                                   return `translate(${FLeftTopX_map + MARGIN_map.LEFT + d.x}, ${FLeftTopY_map + MARGIN_map.TOP + d.y})`;
@@ -123,8 +125,9 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
       // console.log(role_player_num)
       role_dots.append("circle")
                   .attr('r', d=> Math.sqrt(role_player_num[d.role]*9))
-                  .attr("fill", blue)
-                  .attr("opacity", 1);
+                  .attr("fill", color_dict.dot_normal)
+                  .attr("opacity", 1)
+                  .call(tip_lol);
       role_dots.append("text")
                   .attr("x", -20)
                   .attr("y", -20)
@@ -132,22 +135,29 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                   .text(d => d.role)
                   .style("fill", "white")
                   .attr("opacity", 1); 
+      role_dots.on('mouseover', tip_lol.show)
+                .on('mouseout', tip_lol.hide);
       //#endregion lol map
           
       //#region world map
       const svg_map = d3.select("#map-area").append("svg")
               .attr("width", FWidth_map)
-              .attr("height", FHeight_map);    
+              .attr("height", FHeight_map)
+              .style("background-color", color_dict.earth_sea);
+              // .style("border-style", "solid");
+              
+      
       let g_map = svg_map.append("g")
               .attr("transform", `translate(${FLeftTopX_map + MARGIN_map.LEFT}, 
-                                            ${FLeftTopY_map + MARGIN_map.TOP})`);
+                                            ${FLeftTopY_map + MARGIN_map.TOP})`)
+              
       g_map.selectAll("path")
         .data(map.features)
         .enter()
         .append("path")
         .attr("d", d3.geoPath().projection(projection))
-        .attr("fill", "#fff")
-        .style("stroke", "#a4aca7");
+        .attr("fill", color_dict.earth_land)
+        .style("stroke", color_dict.national_boundaries);
       
       let country_player_num = getCountryPlayersNum(countries, players);
 
@@ -156,31 +166,49 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                                   return `translate(${FLeftTopX_map + MARGIN_map.LEFT}, ${FLeftTopY_map + MARGIN_map.TOP })`;
                                 });
       
+      let tip_map = d3.tip()
+                  .attr('class', 'd3-tip')
+                  .html(d=>`${d.Country}</br>Player number: ${country_player_num[d.Country]}`)
       country_dots.append("circle")
         .attr('r', d => Math.sqrt(country_player_num[d.Country]*9))
         .attr("cx", d => projection([d.lon, d.lat])[0])
         .attr("cy", d => projection([d.lon, d.lat])[1])
-        .attr("fill", blue)
-        .attr("opacity", "0.7");
+        .attr("fill", color_dict.dot_normal)
+        .attr("opacity", "0.9");
       country_dots.append("text")
         .attr("x", d => projection([d.lon, d.lat])[0])
         .attr("y", d => projection([d.lon, d.lat])[1])
         .attr("font-size", fontSize_map)
         .text(d => { return d.Country})
-        .attr("opacity", 1); 
+        .attr("opacity", 1)
+        .call(tip_map); 
       var zoom = d3.zoom()
         .scaleExtent([1, 8])
         .on('zoom', function() {
             g_map.selectAll('path')
                   .attr('transform', d3.event.transform);
-            console.log(d3.event.transform)
+            // console.log(d3.event.transform)
             country_dots.selectAll("circle")
                   .attr('transform', d3.event.transform);
+            
             country_dots.selectAll("text")
-                  .attr('transform', d3.event.transform)
+                  .attr('transform',d3.event.transform)
+                  .attr("font-size", fontSize_lol/d3.event.transform.k);
         });
-  
+        
       svg_map.call(zoom);
+                  
+
+      country_dots.on('mouseover', tip_map.show)
+                  .on('mouseout', tip_map.hide);
+
+      svg_map.append("g")
+            .append("rect")
+            .attr("width",`${FWidth_map}`)
+            .attr("height",`${FHeight_map}`)
+            .style("fill","none")
+            .style("stroke","black")
+            .style("stroke-width",5);
       // #endregion world map
 
       //#region  team check box
@@ -280,11 +308,11 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                 // .attr("transform", d => `translate(${pts_x(d.x0)}, 0)`) 
                 .attr("height", d => HEIGHT_bar -y(d.length))
                 .style("fill", d => {
-                  let color = blue;
+                  let color = color_dict.dot_normal;
                   d.forEach( e => {
                     // console.log(e, player_dict[selected_players_id], player_dict[selected_players_id] == e);
                     if(player_dict[selected_players_id] == e)
-                      color = red;
+                      color = color_dict.dot_selected;
                   })
                   return color;
                 })
@@ -394,7 +422,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
             .attr("y", d => y(d.length))
             .attr("width", d => x(d.x1)-x(d.x0))
             .attr("height", d => HEIGHT_bar- y(d.length))
-            .style("fill", blue)
+            .style("fill", color_dict.dot_normal)
             .attr('stroke', 'black')
             .attr('stroke-width', "0.5px")
 
@@ -474,10 +502,10 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                   .attr("fill", d => {
                     if (selected_players_id != -1 && player_dict[selected_players_id]['Position'] == d.role)
                     {
-                      return red;
+                      return color_dict.dot_selected;
                     }
                     else
-                      return blue;
+                      return color_dict.dot_normal;
                   });
         role_dots.selectAll("text")
                   .transition()
@@ -503,10 +531,10 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                   .attr("fill", d => {
                     if (selected_players_id != -1 && player_dict[selected_players_id].Country == d.Country)
                     {
-                      return red;
+                      return color_dict.dot_selected;
                     }
                     else
-                      return blue;
+                      return color_dict.dot_normal;
                   });
         country_dots.selectAll("text")
                   .transition()
@@ -524,7 +552,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                 .text(d => d.Player)
                 .style("background-color", d => {
                   if (d.player_id == selected_players_id)
-                    return highlight;
+                    return color_dict.highlight;
                 })
                 .style("font-size","16px")
                 .on("click", d=>{

@@ -1,8 +1,10 @@
 import json
 import csv
-with open('data/2022_team.csv', newline='') as file:
+print("hello")
+with open('data/hero_usage_data/2014_champion.csv', newline='') as file:
     rows = csv.reader(file)
     team = set()
     for row in rows:
-        team.add(row[2])
-    print(sorted(list(team)))
+        team.add(row[0])
+    
+    print("result:", sorted(list(team)))
