@@ -43,7 +43,7 @@ const role = [{"role":"TOP", "x":57,"y":51},
               {"role":"MID", "x":132,"y":147},
               {"role":"SUPPORT", "x":198,"y":210},
               {"role":"ADC", "x":240,"y":240}]
-const teams = ['ALL', '100T', 'C9', 'CTBC', 'DRX', 'DWG', 'EDG', 'EG', 'FNC', 'G2', 'G3', 'GAM', 'Gen.G', 'JDG', 'RNG', 'Rogue', 'T1', 'TOP']
+const teams = ['ALL', '100T', 'C9', 'CTBC', 'DRX', 'DWG', 'EDG', 'EG', 'FNC', 'G2', 'GAM', 'Gen.G', 'JDG', 'RNG', 'Rogue', 'T1', 'TOP']
 
 let is_position_selected = {"TOP": true, "MID": true, "JUNGLE": true, "SUPPORT": true, "ADC": true}
 
