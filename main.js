@@ -114,6 +114,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                     .attr("opacity", "0.95")
                     .attr("transform", `translate(${FLeftTopX_lol + MARGIN_lol.LEFT}, 
                       ${FLeftTopY_lol + MARGIN_lol.TOP})`);
+      let role_player_num = getRolePlayersNum(role, players);
       let tip_lol = d3.tip()
                       .attr('class', 'd3-tip')
                       .html(d=>`${d.role}</br>Player number: ${role_player_num[d.role]}`)                
@@ -121,7 +122,6 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                                 .attr("transform", (d, i) => {
                                   return `translate(${FLeftTopX_map + MARGIN_map.LEFT + d.x}, ${FLeftTopY_map + MARGIN_map.TOP + d.y})`;
                                 })
-      let role_player_num = getRolePlayersNum(role, players);
       // console.log(role_player_num)
       role_dots.append("circle")
                   .attr('r', d=> Math.sqrt(role_player_num[d.role]*9))
@@ -487,6 +487,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
         selected_players = get_selected_players();
         // console.log(selected_players_id);
         let role_selected_player_num = getRolePlayersNum(role, selected_players);
+        tip_lol.html(d=>`${d.role}</br>Player number: ${role_selected_player_num[d.role]}`)   
         role_dots.selectAll("circle")
                   .transition()
                   .duration(transition_time)
@@ -516,6 +517,8 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                           } else return 0;
                         }); 
         let country_selected_player_num = getCountryPlayersNum(countries, selected_players);
+        
+        tip_map.html(d=>`${d.Country}</br>Player number: ${country_selected_player_num[d.Country]}`);
         country_dots.selectAll("circle")
                   .transition()
                   .duration(transition_time)
