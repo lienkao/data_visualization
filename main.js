@@ -320,7 +320,7 @@ d3.csv("data/players.csv", d3.autoType).then(players => {
                   let alpha = 0.5;
                   d.forEach( e => {
                     // console.log(e, player_dict[selected_players_id], player_dict[selected_players_id] == e);
-                    if(player_dict[selected_players_id] == e)
+                    if(selected_players_id==-1 || player_dict[selected_players_id] == e)
                       alpha = 1;
                   })
                   return alpha;
